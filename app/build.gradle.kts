@@ -23,11 +23,7 @@ android {
     buildConfigField(
       "String",
       "SIGNALING_SERVER_IP_ADDRESS",
-      "\"" + com.android.build.gradle.internal.cxx.configure.gradleLocalProperties(
-        rootDir,
-        providers
-      )
-        .getProperty("SIGNALING_SERVER_IP_ADDRESS", "") + "\""
+      "\"ws://10.102.10.112/android-camera-service/ws_android\""
     )
   }
 
@@ -82,6 +78,8 @@ dependencies {
   implementation(libs.androidx.compose.foundation.layout)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.constraintlayout)
+  implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+  implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
   // image loading
   implementation(libs.landscapist.glide)
