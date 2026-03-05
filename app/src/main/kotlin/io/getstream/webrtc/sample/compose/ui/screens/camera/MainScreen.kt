@@ -7,12 +7,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel
 
 @Composable
 fun MainScreen(
-  cameraViewModel: CameraViewModel = viewModel()
+  cameraViewModel: CameraViewModel
 ) {
 
   val state by cameraViewModel.uiState.collectAsState()
@@ -29,7 +28,9 @@ fun MainScreen(
     Spacer(modifier = Modifier.height(20.dp))
 
     Button(
-      onClick = { cameraViewModel.connectCamera() }
+      onClick = {
+        cameraViewModel.connectCamera()
+      }
     ) {
       Text("Connect Camera")
     }
@@ -43,23 +44,27 @@ fun MainScreen(
     if (state.isConnected) {
 
       Button(
-        onClick = { cameraViewModel.showPreview() }
+        onClick = {
+          cameraViewModel.showPreview()
+        }
       ) {
         Text("Show Preview")
       }
-    }
 
-    Spacer(modifier = Modifier.height(20.dp))
+      Spacer(modifier = Modifier.height(20.dp))
+    }
 
     if (state.showPreview) {
 
-      CameraPreview()
+      CameraPreview(
+        videoTrack = state.localVideoTrack
+      )
 
       Spacer(modifier = Modifier.height(20.dp))
 
       ZoomControls(
-        onZoomSelected = {
-          cameraViewModel.setZoom(it)
+        onZoomSelected = { zoom ->
+          cameraViewModel.setZoom(zoom)
         }
       )
     }

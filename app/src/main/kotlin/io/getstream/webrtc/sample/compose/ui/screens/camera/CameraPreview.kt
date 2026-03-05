@@ -8,20 +8,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.webrtc.VideoTrack
+import io.getstream.webrtc.sample.compose.ui.components.VideoRendererasd
 
 @Composable
-fun CameraPreview() {
+fun CameraPreview(
+  videoTrack: VideoTrack?
+) {
 
   Box(
     modifier = Modifier
       .fillMaxWidth()
       .height(300.dp)
-      .background(Color.Black),
-    contentAlignment = Alignment.Center
   ) {
-    Text(
-      text = "Camera Preview Placeholder",
-      color = Color.White
-    )
+
+    videoTrack?.let {
+      VideoRendererasd(
+        modifier = Modifier.fillMaxSize(),
+        videoTrack = it
+      )
+    }
   }
 }
