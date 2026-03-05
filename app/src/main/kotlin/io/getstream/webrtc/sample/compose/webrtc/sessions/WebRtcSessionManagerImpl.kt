@@ -289,18 +289,20 @@ class WebRtcSessionManagerImpl(
       val characteristics = manager.getCameraCharacteristics(id)
       val cameraLensFacing = characteristics.get(CameraCharacteristics.LENS_FACING)
 
-      if (cameraLensFacing == CameraMetadata.LENS_FACING_FRONT) {
+      // SELECT REAR CAMERA
+      if (cameraLensFacing == CameraMetadata.LENS_FACING_BACK) {
         foundCamera = true
         cameraId = id
+        break
       }
     }
 
+    // fallback if rear camera not found
     if (!foundCamera && ids.isNotEmpty()) {
       cameraId = ids.first()
     }
 
-    val camera2Capturer = Camera2Capturer(context, cameraId, null)
-    return camera2Capturer
+    return Camera2Capturer(context, cameraId, null)
   }
 
   private fun buildAudioConstraints(): MediaConstraints {
