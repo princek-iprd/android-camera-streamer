@@ -28,6 +28,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.core.content.getSystemService
 import io.getstream.log.taggedLogger
 import io.getstream.webrtc.android.ktx.stringify
+import io.getstream.webrtc.sample.compose.webrtc.MediaMTXPublisher
 import io.getstream.webrtc.sample.compose.webrtc.SignalingClient
 import io.getstream.webrtc.sample.compose.webrtc.SignalingCommand
 import io.getstream.webrtc.sample.compose.webrtc.audio.AudioHandler
@@ -75,6 +76,10 @@ class WebRtcSessionManagerImpl(
   // used to send remote video track to the sender
   private val _remoteVideoSinkFlow = MutableSharedFlow<VideoTrack>()
   override val remoteVideoSinkFlow: SharedFlow<VideoTrack> = _remoteVideoSinkFlow
+
+  private val publisher = MediaMTXPublisher(
+    "http://10.102.10.112:8889"
+  )
 
   // declaring video constraints and setting OfferToReceiveVideo to true
   // this step is mandatory to create valid offer and answer
@@ -221,7 +226,7 @@ class WebRtcSessionManagerImpl(
 
   override fun onSessionScreenReady() {
     peerConnection.connection.addTrack(localVideoTrack)
-    peerConnection.connection.addTrack(localAudioTrack)
+//    peerConnection.connection.addTrack(localAudioTrack)
     sessionManagerScope.launch {
       // sending local video track to show local video from start
       _localVideoSinkFlow.emit(localVideoTrack)
@@ -235,12 +240,19 @@ class WebRtcSessionManagerImpl(
   }
 
   private suspend fun sendOffer() {
+
     val offer = peerConnection.createOffer().getOrThrow()
-    val result = peerConnection.setLocalDescription(offer)
-    result.onSuccess {
-      signalingClient.sendCommand(SignalingCommand.OFFER, offer.description)
+
+    peerConnection.setLocalDescription(offer)
+
+    publisher.publishOffer(offer) { answer ->
+
+      sessionManagerScope.launch {
+
+        peerConnection.setRemoteDescription(answer)
+
+      }
     }
-    logger.d { "[SDP] send offer: ${offer.stringify()}" }
   }
 
   private suspend fun sendAnswer() {
