@@ -6,7 +6,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel
 
@@ -28,26 +27,39 @@ fun MainScreen(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    Button(
-      onClick = {
-        cameraViewModel.connectCamera()
+    /**
+     * Connect / Disconnect button
+     */
+    if (!state.isConnected) {
+
+      Button(
+        onClick = { cameraViewModel.connectCamera() }
+      ) {
+        Text("Connect Camera")
       }
-    ) {
-      Text("Connect Camera")
+
+    } else {
+
+      Button(
+        onClick = { cameraViewModel.disconnectCamera() }
+      ) {
+        Text("Disconnect Camera")
+      }
     }
 
     Spacer(modifier = Modifier.height(10.dp))
 
-    Text("Status: ${state.status}")
+    Text(text = "Status: ${state.status}")
 
     Spacer(modifier = Modifier.height(20.dp))
 
+    /**
+     * Show Preview Button
+     */
     if (state.isConnected) {
 
       Button(
-        onClick = {
-          cameraViewModel.showPreview()
-        }
+        onClick = { cameraViewModel.showPreview() }
       ) {
         Text("Show Preview")
       }
@@ -55,7 +67,10 @@ fun MainScreen(
       Spacer(modifier = Modifier.height(20.dp))
     }
 
-    if (state.showPreview) {
+    /**
+     * Camera Preview + Zoom
+     */
+    if (state.isConnected && state.showPreview) {
 
       CameraPreview(
         videoTrack = state.localVideoTrack

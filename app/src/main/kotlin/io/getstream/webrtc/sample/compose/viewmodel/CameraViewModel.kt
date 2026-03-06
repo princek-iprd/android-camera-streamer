@@ -2,6 +2,7 @@ package io.getstream.webrtc.sample.compose.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.getstream.webrtc.sample.compose.network.WebSocketManager
 import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,13 +15,54 @@ class CameraViewModel(
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(CameraUiState())
+  private val webSocketManager = WebSocketManager()
   val uiState: StateFlow<CameraUiState> = _uiState
 
   fun connectCamera() {
+
+    _uiState.update {
+      it.copy(status = "Connecting to server...")
+    }
+
+    webSocketManager.connect(
+      url = "ws://10.102.10.112/android-camera-service/ws_android",
+
+      onConnected = {
+
+        _uiState.update {
+          it.copy(
+            isConnected = true,
+            status = "Connected to server"
+          )
+        }
+      },
+
+      onDisconnected = {
+
+        _uiState.update {
+          it.copy(
+            isConnected = false,
+            showPreview = false,
+            status = "Disconnected"
+          )
+        }
+      },
+
+      onMessage = { message ->
+        println("Server message: $message")
+      }
+    )
+  }
+
+  fun disconnectCamera() {
+
+    webSocketManager.disconnect()
+
     _uiState.update {
       it.copy(
-        isConnected = true,
-        status = "Connected"
+        isConnected = false,
+        showPreview = false,
+        status = "Disconnected"
       )
     }
   }
