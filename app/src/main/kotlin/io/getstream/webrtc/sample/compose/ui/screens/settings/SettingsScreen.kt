@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,11 @@ fun SettingsScreen(
 ) {
   val savedIps by viewModel.savedIps.collectAsState()
   val selectedIp by viewModel.selectedIp.collectAsState()
+
+  // Scanner States
+  val isScanning by viewModel.isScanning.collectAsState()
+  val discoveredServer by viewModel.discoveredServer.collectAsState()
+  val scanMessage by viewModel.scanMessage.collectAsState()
 
   var newIpText by remember { mutableStateOf("") }
 
@@ -90,8 +96,74 @@ fun SettingsScreen(
         }
       }
 
-      Spacer(modifier = Modifier.height(32.dp))
+      Spacer(modifier = Modifier.height(24.dp))
 
+      // --- New Auto Discovery Section ---
+      Text(
+        text = "Auto Discover ORIN Server",
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        color = MaterialTheme.colors.primary,
+        modifier = Modifier.padding(bottom = 8.dp)
+      )
+
+      Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = 2.dp,
+        shape = RoundedCornerShape(12.dp)
+      ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+          Button(
+            onClick = { viewModel.startScan() },
+            enabled = !isScanning,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Icon(Icons.Default.Search, contentDescription = "Scan Icon")
+            Spacer(Modifier.width(8.dp))
+            Text(if (isScanning) "Scanning..." else "Scan for ORIN Server")
+          }
+
+          if (isScanning) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+          }
+
+          scanMessage?.let { msg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+              text = msg,
+              color = if (msg.contains("No ORIN") || msg.contains("failed")) MaterialTheme.colors.error else MaterialTheme.colors.onSurface,
+              fontSize = 14.sp,
+              modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+          }
+
+          discoveredServer?.let { server ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Discovered ORIN Server", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text("IP: ${server.ip}", fontSize = 14.sp)
+            Text("Port: ${server.port}", fontSize = 14.sp)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+              onClick = { viewModel.saveServerDetails(server.ip, server.port) },
+              modifier = Modifier.align(Alignment.End),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Text("Save & Connect")
+            }
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      // --- Saved Servers Section ---
       Text(
         text = "Saved Server IPs",
         fontWeight = FontWeight.Bold,

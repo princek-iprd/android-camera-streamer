@@ -53,7 +53,10 @@ class MainActivity : ComponentActivity() {
         WebrtcSampleComposeTheme {
           val navController = rememberNavController()
           val settingsDataStore = remember { SettingsDataStore(this@MainActivity) }
-          val settingsViewModel = remember { SettingsViewModel(settingsDataStore) }
+
+          // Pass the Context (this@MainActivity) as the first parameter to SettingsViewModel
+          val settingsViewModel = remember { SettingsViewModel(this@MainActivity, settingsDataStore) }
+
           val selectedIp by settingsViewModel.selectedIp.collectAsState()
 
           NavHost(navController = navController, startDestination = "main") {
