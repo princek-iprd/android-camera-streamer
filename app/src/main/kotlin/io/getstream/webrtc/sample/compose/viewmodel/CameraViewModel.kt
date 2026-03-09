@@ -17,15 +17,17 @@ class CameraViewModel(
   private val _uiState = MutableStateFlow(CameraUiState())
   private val webSocketManager = WebSocketManager()
   val uiState: StateFlow<CameraUiState> = _uiState
+  private var targetIp: String = "10.102.10.112"
 
-  fun connectCamera() {
+  fun connectCamera(ip: String) {
+    targetIp = ip
 
     _uiState.update {
       it.copy(status = "Connecting to server...")
     }
 
     webSocketManager.connect(
-      url = "ws://10.102.10.112/android-camera-service/ws_android",
+      url = "ws://$ip/android-camera-service/ws_android",
 
       onConnected = {
 
@@ -78,7 +80,7 @@ class CameraViewModel(
 
     observeLocalVideoTrack()
 
-    sessionManager.onSessionScreenReady()
+    sessionManager.onSessionScreenReady(targetIp)
   }
 
   private fun observeLocalVideoTrack() {

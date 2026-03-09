@@ -77,9 +77,7 @@ class WebRtcSessionManagerImpl(
   private val _remoteVideoSinkFlow = MutableSharedFlow<VideoTrack>()
   override val remoteVideoSinkFlow: SharedFlow<VideoTrack> = _remoteVideoSinkFlow
 
-  private val publisher = MediaMTXPublisher(
-    "http://10.102.10.112:8889"
-  )
+  private val publisher = MediaMTXPublisher()
 
   // declaring video constraints and setting OfferToReceiveVideo to true
   // this step is mandatory to create valid offer and answer
@@ -224,7 +222,7 @@ class WebRtcSessionManagerImpl(
     signalingClient.dispose()
   }
 
-  override fun onSessionScreenReady() {
+  override fun onSessionScreenReady(ip: String) {
     peerConnection.connection.addTrack(localVideoTrack)
 //    peerConnection.connection.addTrack(localAudioTrack)
     sessionManagerScope.launch {
@@ -234,18 +232,18 @@ class WebRtcSessionManagerImpl(
       if (offer != null) {
         sendAnswer()
       } else {
-        sendOffer()
+        sendOffer(ip)
       }
     }
   }
 
-  private suspend fun sendOffer() {
+  private suspend fun sendOffer(ip: String) {
 
     val offer = peerConnection.createOffer().getOrThrow()
 
     peerConnection.setLocalDescription(offer)
 
-    publisher.publishOffer(offer) { answer ->
+    publisher.publishOffer(ip, offer) { answer ->
 
       sessionManagerScope.launch {
 

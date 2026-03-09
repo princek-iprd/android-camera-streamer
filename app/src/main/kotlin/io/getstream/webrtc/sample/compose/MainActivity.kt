@@ -11,8 +11,15 @@ import io.getstream.webrtc.sample.compose.webrtc.SignalingClient
 import io.getstream.webrtc.sample.compose.webrtc.peer.StreamPeerConnectionFactory
 import io.getstream.webrtc.sample.compose.webrtc.sessions.LocalWebRtcSessionManager
 import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManagerImpl
-import io.getstream.webrtc.sample.compose.webrtc.sessions.LocalWebRtcSessionManager
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import io.getstream.webrtc.sample.compose.data.SettingsDataStore
+import io.getstream.webrtc.sample.compose.ui.screens.settings.SettingsScreen
+import io.getstream.webrtc.sample.compose.ui.screens.settings.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -44,9 +51,27 @@ class MainActivity : ComponentActivity() {
       ) {
 
         WebrtcSampleComposeTheme {
-          MainScreen(cameraViewModel)
-        }
+          val navController = rememberNavController()
+          val settingsDataStore = remember { SettingsDataStore(this@MainActivity) }
+          val settingsViewModel = remember { SettingsViewModel(settingsDataStore) }
+          val selectedIp by settingsViewModel.selectedIp.collectAsState()
 
+          NavHost(navController = navController, startDestination = "main") {
+            composable("main") {
+              MainScreen(
+                cameraViewModel = cameraViewModel,
+                selectedIp = selectedIp,
+                onNavigateToSettings = { navController.navigate("settings") }
+              )
+            }
+            composable("settings") {
+              SettingsScreen(
+                viewModel = settingsViewModel,
+                onNavigateBack = { navController.popBackStack() }
+              )
+            }
+          }
+        }
       }
     }
   }

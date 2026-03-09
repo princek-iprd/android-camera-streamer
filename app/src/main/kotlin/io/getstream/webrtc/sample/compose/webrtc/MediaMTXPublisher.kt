@@ -7,13 +7,12 @@ import org.json.JSONObject
 import org.webrtc.SessionDescription
 import java.io.IOException
 
-class MediaMTXPublisher(
-  private val serverUrl: String
-) {
+class MediaMTXPublisher {
 
   private val client = OkHttpClient()
 
   fun publishOffer(
+    ip: String,
     offer: SessionDescription,
     onAnswer: (SessionDescription) -> Unit
   ) {
@@ -22,7 +21,7 @@ class MediaMTXPublisher(
       .toRequestBody("application/sdp".toMediaType())
 
     val request = Request.Builder()
-      .url("$serverUrl/mystream/whip")
+      .url("http://$ip:8889/mystream/whip")
       .post(body)
       .build()
 

@@ -36,13 +36,16 @@ class SignalingClient {
   private val logger by taggedLogger("Call:SignalingClient")
   private val signalingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   private val client = OkHttpClient()
-  private val request = Request
-    .Builder()
-    .url(BuildConfig.SIGNALING_SERVER_IP_ADDRESS)
-    .build()
+  private var ws: WebSocket? = null
 
-  // opening web socket with signaling server
-  private val ws = client.newWebSocket(request, SignalingWebSocketListener())
+  fun connect(ip: String) {
+    val request = Request.Builder()
+      .url("ws://$ip/android-camera-service/ws_android")
+      .build()
+
+    ws?.cancel()
+    ws = client.newWebSocket(request, SignalingWebSocketListener())
+  }
 
   // session flow to send information about the session state to the subscribers
   private val _sessionStateFlow = MutableStateFlow(WebRTCSessionState.Offline)
@@ -54,7 +57,7 @@ class SignalingClient {
 
   fun sendCommand(signalingCommand: SignalingCommand, message: String) {
     logger.d { "[sendCommand] $signalingCommand $message" }
-    ws.send("$signalingCommand $message")
+    ws?.send("$signalingCommand $message")
   }
 
   private inner class SignalingWebSocketListener : WebSocketListener() {
@@ -90,7 +93,7 @@ class SignalingClient {
   fun dispose() {
     _sessionStateFlow.value = WebRTCSessionState.Offline
     signalingScope.cancel()
-    ws.cancel()
+    ws?.cancel()
   }
 }
 
