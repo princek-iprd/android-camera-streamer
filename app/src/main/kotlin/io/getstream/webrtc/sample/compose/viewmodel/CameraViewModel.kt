@@ -59,6 +59,7 @@ class CameraViewModel(
   fun disconnectCamera() {
 
     webSocketManager.disconnect()
+    sessionManager.disconnect()
 
     _uiState.update {
       it.copy(

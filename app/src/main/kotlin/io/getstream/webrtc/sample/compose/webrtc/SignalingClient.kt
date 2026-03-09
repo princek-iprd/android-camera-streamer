@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -34,11 +35,14 @@ import okhttp3.WebSocketListener
 
 class SignalingClient {
   private val logger by taggedLogger("Call:SignalingClient")
-  private val signalingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+  private var signalingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   private val client = OkHttpClient()
   private var ws: WebSocket? = null
 
   fun connect(ip: String) {
+    if (signalingScope.isActive.not()) {
+      signalingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
     val request = Request.Builder()
       .url("ws://$ip/android-camera-service/ws_android")
       .build()

@@ -90,8 +90,6 @@ class WebRtcSessionManagerImpl(
     )
   }
 
-  // getting front camera
-  private val videoCapturer: VideoCapturer by lazy { buildCameraCapturer() }
   private val cameraManager by lazy { context.getSystemService<CameraManager>() }
   private val cameraEnumerator: Camera2Enumerator by lazy {
     Camera2Enumerator(context)
@@ -108,32 +106,6 @@ class WebRtcSessionManagerImpl(
       } ?: error("There is no matched resolution!")
     }
 
-  // we need it to initialize video capturer
-  private val surfaceTextureHelper = SurfaceTextureHelper.create(
-    "SurfaceTextureHelperThread",
-    peerConnectionFactory.eglBaseContext,
-  )
-
-  private val videoSource by lazy {
-    peerConnectionFactory.makeVideoSource(videoCapturer.isScreencast).apply {
-      videoCapturer.initialize(surfaceTextureHelper, context, this.capturerObserver)
-      videoCapturer.startCapture(resolution.width, resolution.height, 30)
-    }
-  }
-
-  private val localVideoTrack: VideoTrack by lazy {
-    peerConnectionFactory.makeVideoTrack(
-      source = videoSource,
-      trackId = "Video${UUID.randomUUID()}",
-    )
-  }
-
-  /** Audio properties */
-
-  private val audioHandler: AudioHandler by lazy {
-    AudioSwitchHandler(context)
-  }
-
   private val audioManager by lazy {
     context.getSystemService<AudioManager>()
   }
@@ -142,21 +114,56 @@ class WebRtcSessionManagerImpl(
     buildAudioConstraints()
   }
 
-  private val audioSource by lazy {
-    peerConnectionFactory.makeAudioSource(audioConstraints)
-  }
+  // used to initialize video capturer
+  private var surfaceTextureHelper: SurfaceTextureHelper? = null
 
-  private val localAudioTrack: AudioTrack by lazy {
-    peerConnectionFactory.makeAudioTrack(
+  private var _videoCapturer: VideoCapturer? = null
+  private val videoCapturer: VideoCapturer
+    get() = _videoCapturer ?: buildCameraCapturer().also { _videoCapturer = it }
+
+  private var _videoSource: org.webrtc.VideoSource? = null
+  private val videoSource: org.webrtc.VideoSource
+    get() = _videoSource ?: peerConnectionFactory.makeVideoSource(videoCapturer.isScreencast).apply {
+      _videoSource = this
+      if (surfaceTextureHelper == null) {
+        surfaceTextureHelper = SurfaceTextureHelper.create(
+          "SurfaceTextureHelperThread",
+          peerConnectionFactory.eglBaseContext,
+        )
+      }
+      videoCapturer.initialize(surfaceTextureHelper, context, this.capturerObserver)
+      videoCapturer.startCapture(resolution.width, resolution.height, 30)
+    }
+
+  private var _localVideoTrack: VideoTrack? = null
+  private val localVideoTrack: VideoTrack
+    get() = _localVideoTrack ?: peerConnectionFactory.makeVideoTrack(
+      source = videoSource,
+      trackId = "Video${UUID.randomUUID()}",
+    ).also { _localVideoTrack = it }
+
+  /** Audio properties */
+
+  private var _audioHandler: AudioHandler? = null
+  private val audioHandler: AudioHandler
+    get() = _audioHandler ?: AudioSwitchHandler(context).also { _audioHandler = it }
+
+  private var _audioSource: org.webrtc.AudioSource? = null
+  private val audioSource: org.webrtc.AudioSource
+    get() = _audioSource ?: peerConnectionFactory.makeAudioSource(audioConstraints).also { _audioSource = it }
+
+  private var _localAudioTrack: AudioTrack? = null
+  private val localAudioTrack: AudioTrack
+    get() = _localAudioTrack ?: peerConnectionFactory.makeAudioTrack(
       source = audioSource,
       trackId = "Audio${UUID.randomUUID()}",
-    )
-  }
+    ).also { _localAudioTrack = it }
 
   private var offer: String? = null
 
-  private val peerConnection: StreamPeerConnection by lazy {
-    peerConnectionFactory.makePeerConnection(
+  private var _peerConnection: StreamPeerConnection? = null
+  private val peerConnection: StreamPeerConnection
+    get() = _peerConnection ?: peerConnectionFactory.makePeerConnection(
       coroutineScope = sessionManagerScope,
       configuration = peerConnectionFactory.rtcConfig,
       type = StreamPeerType.SUBSCRIBER,
@@ -177,8 +184,7 @@ class WebRtcSessionManagerImpl(
           }
         }
       },
-    )
-  }
+    ).also { _peerConnection = it }
 
   init {
     sessionManagerScope.launch {
@@ -210,13 +216,34 @@ class WebRtcSessionManagerImpl(
     localVideoSinkFlow.replayCache.forEach { videoTrack ->
       videoTrack.dispose()
     }
-    localAudioTrack.dispose()
-    localVideoTrack.dispose()
+
+    _localAudioTrack?.dispose()
+    _localVideoTrack?.dispose()
+    _localAudioTrack = null
+    _localVideoTrack = null
 
     // dispose audio handler and video capturer.
-    audioHandler.stop()
-    videoCapturer.stopCapture()
-    videoCapturer.dispose()
+    _audioHandler?.stop()
+    _audioHandler = null
+
+    _videoCapturer?.stopCapture()
+    _videoCapturer?.dispose()
+    _videoCapturer = null
+
+    _videoSource?.dispose()
+    _videoSource = null
+
+    _audioSource?.dispose()
+    _audioSource = null
+
+    surfaceTextureHelper?.dispose()
+    surfaceTextureHelper = null
+
+    _peerConnection?.connection?.close()
+    _peerConnection?.connection?.dispose()
+    _peerConnection = null
+
+    offer = null
 
     // dispose signaling clients and socket.
     signalingClient.dispose()
