@@ -1,18 +1,20 @@
 package io.getstream.webrtc.sample.compose.ui.screens.camera
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Scaffold
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.unit.sp
 import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel
 
 @Composable
@@ -25,14 +27,21 @@ fun MainScreen(
   val state by cameraViewModel.uiState.collectAsState()
 
   Scaffold(
+    modifier = Modifier.systemBarsPadding(),
     topBar = {
       TopAppBar(
-        title = { Text("Stream WebRTC ($selectedIp)") },
+        title = {
+          Column {
+            Text("Stream WebRTC", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(selectedIp, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+          }
+        },
         actions = {
           IconButton(onClick = onNavigateToSettings) {
             Icon(Icons.Default.Settings, contentDescription = "Settings")
           }
-        }
+        },
+        elevation = 4.dp
       )
     }
   ) { paddingValues ->
@@ -40,70 +49,124 @@ fun MainScreen(
       modifier = Modifier
         .fillMaxSize()
         .padding(paddingValues)
-        .padding(20.dp),
+        .padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-      Text(text = "Android Camera Stream")
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      /**
-       * Connect / Disconnect button
-       */
-      if (!state.isConnected) {
-
-        Button(
-          onClick = { cameraViewModel.connectCamera(selectedIp) }
+      Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = 2.dp,
+        shape = RoundedCornerShape(12.dp)
+      ) {
+        Column(
+          modifier = Modifier.padding(16.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          Text("Connect Camera")
-        }
+          Text(
+            text = "Camera Control",
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = MaterialTheme.colors.primary
+          )
 
-      } else {
+          Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-          onClick = { cameraViewModel.disconnectCamera() }
-        ) {
-          Text("Disconnect Camera")
+          /**
+           * Connect / Disconnect button
+           */
+          if (!state.isConnected) {
+            Button(
+              onClick = { cameraViewModel.connectCamera(selectedIp) },
+              modifier = Modifier.fillMaxWidth().height(48.dp),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(20.dp))
+              Spacer(Modifier.width(8.dp))
+              Text("Connect Camera")
+            }
+          } else {
+            OutlinedButton(
+              onClick = { cameraViewModel.disconnectCamera() },
+              modifier = Modifier.fillMaxWidth().height(48.dp),
+              shape = RoundedCornerShape(8.dp),
+              colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colors.error)
+            ) {
+              Icon(Icons.Default.VideocamOff, contentDescription = null, modifier = Modifier.size(20.dp))
+              Spacer(Modifier.width(8.dp))
+              Text("Disconnect Camera")
+            }
+          }
+
+          Spacer(modifier = Modifier.height(12.dp))
+
+          Text(
+            text = "Status: ${state.status}",
+            style = MaterialTheme.typography.caption,
+            color = if (state.isConnected) Color(0xFF4CAF50) else Color.Gray,
+            fontWeight = FontWeight.Medium
+          )
         }
       }
 
-      Spacer(modifier = Modifier.height(10.dp))
-
-      Text(text = "Status: ${state.status}")
-
-      Spacer(modifier = Modifier.height(20.dp))
+      Spacer(modifier = Modifier.height(24.dp))
 
       /**
        * Show Preview Button
        */
       if (state.isConnected) {
-
-        Button(
-          onClick = { cameraViewModel.showPreview() }
-        ) {
-          Text("Show Preview")
+        if (!state.showPreview) {
+          Button(
+            onClick = { cameraViewModel.showPreview() },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+          ) {
+            Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colors.onSecondary)
+            Spacer(Modifier.width(8.dp))
+            Text("Show Preview", color = MaterialTheme.colors.onSecondary)
+          }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
       }
 
       /**
        * Camera Preview + Zoom
        */
       if (state.isConnected && state.showPreview) {
-
-        CameraPreview(
-          videoTrack = state.localVideoTrack
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        ZoomControls(
-          onZoomSelected = { zoom ->
-            cameraViewModel.setZoom(zoom)
+        Card(
+          modifier = Modifier.fillMaxWidth(),
+          elevation = 4.dp,
+          shape = RoundedCornerShape(16.dp)
+        ) {
+          Column {
+            CameraPreview(
+              videoTrack = state.localVideoTrack
+            )
           }
-        )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Card(
+          modifier = Modifier.fillMaxWidth(),
+          elevation = 2.dp,
+          shape = RoundedCornerShape(12.dp)
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+              text = "Zoom Controls",
+              fontWeight = FontWeight.SemiBold,
+              fontSize = 14.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            ZoomControls(
+              onZoomSelected = { zoom ->
+                cameraViewModel.setZoom(zoom)
+              }
+            )
+          }
+        }
       }
     }
   }
