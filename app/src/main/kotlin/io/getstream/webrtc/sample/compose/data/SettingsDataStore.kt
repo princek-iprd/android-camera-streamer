@@ -41,4 +41,24 @@ class SettingsDataStore(private val context: Context) {
       preferences[SELECTED_IP_KEY] = ip
     }
   }
+
+  suspend fun removeIp(ipToRemove: String) {
+    context.dataStore.edit { preferences ->
+      // 1. Get current IPs and split them into a MutableSet
+      val currentIpsString = preferences[SAVED_IPS_KEY] ?: "10.102.10.112"
+      val currentIps = currentIpsString.split(",").filter { it.isNotBlank() }.toMutableSet()
+
+      // 2. Remove the target IP and save back as comma-separated string
+      if (currentIps.contains(ipToRemove)) {
+        currentIps.remove(ipToRemove)
+        preferences[SAVED_IPS_KEY] = currentIps.joinToString(",")
+      }
+
+      // 3. If the user deleted the currently selected IP, default to the first available one
+      val currentSelectedIp = preferences[SELECTED_IP_KEY] ?: "10.102.10.112"
+      if (currentSelectedIp == ipToRemove) {
+        preferences[SELECTED_IP_KEY] = currentIps.firstOrNull() ?: ""
+      }
+    }
+  }
 }

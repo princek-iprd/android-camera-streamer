@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.getstream.webrtc.sample.compose.data.SettingsDataStore
 import io.getstream.webrtc.sample.compose.network.OrinServerScanner
+// import io.getstream.webrtc.sample.compose.utils.OrinServerScanner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,8 +62,14 @@ class SettingsViewModel(
     }
   }
 
-  // --- Scanner Logic ---
+  // --- NEW: Remove IP Logic ---
+  fun removeIp(ip: String) {
+    viewModelScope.launch {
+      dataStore.removeIp(ip) // Ensure SettingsDataStore has this method implemented
+    }
+  }
 
+  // --- Scanner Logic ---
   fun startScan() {
     if (_isScanning.value) return
 
@@ -86,7 +93,6 @@ class SettingsViewModel(
       }
     )
 
-    // 8-second timeout handling
     viewModelScope.launch {
       delay(8000)
       if (_isScanning.value) {
@@ -103,15 +109,13 @@ class SettingsViewModel(
     _isScanning.value = false
   }
 
-  fun saveServerDetails(ip: String, port: Int) {
-    // If you need to save the port alongside the IP, adjust here.
-    // Sticking to the existing logic of saving the raw IP address:
+  fun saveServerDetails(ip: String) {
     addAndSelectIp(ip)
     _scanMessage.value = "Configuration saved successfully."
   }
 
   override fun onCleared() {
     super.onCleared()
-    scanner.stopScan() // Release the multicast lock and stop scanning when ViewModel dies
+    scanner.stopScan()
   }
 }

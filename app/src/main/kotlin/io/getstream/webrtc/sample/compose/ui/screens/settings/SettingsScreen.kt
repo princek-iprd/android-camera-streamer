@@ -7,9 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
@@ -18,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+// Regex to validate a standard IPv4 address strictly
+val IP_REGEX = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$".toRegex()
 
 @Composable
 fun SettingsScreen(
@@ -34,6 +38,9 @@ fun SettingsScreen(
 
   var newIpText by remember { mutableStateOf("") }
 
+  // Check if current text is a valid IP address
+  val isIpValid = newIpText.matches(IP_REGEX)
+
   Scaffold(
     modifier = Modifier.systemBarsPadding(),
     topBar = {
@@ -41,7 +48,7 @@ fun SettingsScreen(
         title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
         navigationIcon = {
           IconButton(onClick = onNavigateBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
           }
         },
         elevation = 4.dp
@@ -67,38 +74,53 @@ fun SettingsScreen(
         elevation = 2.dp,
         shape = RoundedCornerShape(12.dp)
       ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          OutlinedTextField(
-            value = newIpText,
-            onValueChange = { newIpText = it },
-            label = { Text("IP Address (e.g., 192.168.1.5)") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            shape = RoundedCornerShape(8.dp)
-          )
-          Spacer(modifier = Modifier.width(12.dp))
-          Button(
-            onClick = {
-              viewModel.addAndSelectIp(newIpText)
-              newIpText = ""
-            },
-            enabled = newIpText.isNotBlank(),
-            modifier = Modifier.height(56.dp).padding(top = 8.dp),
-            shape = RoundedCornerShape(8.dp)
+        Column(modifier = Modifier.padding(16.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(Icons.Default.Add, contentDescription = "Add IP")
+            OutlinedTextField(
+              value = newIpText,
+              onValueChange = { input ->
+                // Optional: Filter out any characters that aren't numbers or dots immediately
+                newIpText = input.filter { it.isDigit() || it == '.' }
+              },
+              label = { Text("IP Address (e.g., 192.168.1.5)") },
+              modifier = Modifier.weight(1f),
+              singleLine = true,
+              shape = RoundedCornerShape(8.dp),
+              isError = newIpText.isNotEmpty() && !isIpValid
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+              onClick = {
+                viewModel.addAndSelectIp(newIpText)
+                newIpText = ""
+              },
+              enabled = isIpValid, // Only enable if it's a valid IP
+              modifier = Modifier
+                .height(56.dp)
+                .padding(top = 8.dp),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Icon(Icons.Default.Add, contentDescription = "Add IP")
+            }
+          }
+
+          if (newIpText.isNotEmpty() && !isIpValid) {
+            Text(
+              text = "Invalid IP format. Use numbers and dots only.",
+              color = MaterialTheme.colors.error,
+              fontSize = 12.sp,
+              modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+            )
           }
         }
       }
 
       Spacer(modifier = Modifier.height(24.dp))
 
-      // --- New Auto Discovery Section ---
+      // --- Auto Discovery Section ---
       Text(
         text = "Auto Discover ORIN Server",
         fontWeight = FontWeight.Bold,
@@ -151,7 +173,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
-              onClick = { viewModel.saveServerDetails(server.ip, server.port) },
+              onClick = { viewModel.saveServerDetails(server.ip) },
               modifier = Modifier.align(Alignment.End),
               shape = RoundedCornerShape(8.dp)
             ) {
@@ -173,7 +195,9 @@ fun SettingsScreen(
       )
 
       Card(
-        modifier = Modifier.fillMaxWidth().weight(1f),
+        modifier = Modifier
+          .fillMaxWidth()
+          .weight(1f),
         elevation = 2.dp,
         shape = RoundedCornerShape(12.dp)
       ) {
@@ -187,7 +211,7 @@ fun SettingsScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .clickable { viewModel.selectIp(ip) }
-                .padding(vertical = 16.dp, horizontal = 16.dp),
+                .padding(vertical = 12.dp, horizontal = 16.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Icon(
@@ -212,6 +236,19 @@ fun SettingsScreen(
                   imageVector = Icons.Default.CheckCircle,
                   contentDescription = "Selected",
                   tint = MaterialTheme.colors.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+              }
+
+              // --- NEW: Remove / Delete IP Button ---
+              IconButton(
+                onClick = { viewModel.removeIp(ip) },
+                modifier = Modifier.size(32.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Close,
+                  contentDescription = "Remove IP",
+                  tint = MaterialTheme.colors.error.copy(alpha = 0.8f)
                 )
               }
             }
