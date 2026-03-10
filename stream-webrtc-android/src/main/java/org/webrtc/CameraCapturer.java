@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @SuppressWarnings("deprecation")
-abstract class CameraCapturer implements CameraVideoCapturer {
+public abstract class CameraCapturer implements CameraVideoCapturer {
   enum SwitchState {
     IDLE, // No switch requested.
     PENDING, // Waiting for previous capture session to open.
@@ -35,69 +35,68 @@ abstract class CameraCapturer implements CameraVideoCapturer {
   private final Handler uiThreadHandler;
 
   @Nullable
-  private final CameraSession.CreateSessionCallback createSessionCallback =
-      new CameraSession.CreateSessionCallback() {
-        @Override
-        public void onDone(CameraSession session) {
-          checkIsOnCameraThread();
-          Logging.d(TAG, "Create session done. Switch state: " + switchState);
-          uiThreadHandler.removeCallbacks(openCameraTimeoutRunnable);
-          synchronized (stateLock) {
-            capturerObserver.onCapturerStarted(true /* success */);
-            sessionOpening = false;
-            currentSession = session;
-            cameraStatistics = new CameraStatistics(surfaceHelper, eventsHandler);
-            firstFrameObserved = false;
-            stateLock.notifyAll();
+  private final CameraSession.CreateSessionCallback createSessionCallback = new CameraSession.CreateSessionCallback() {
+    @Override
+    public void onDone(CameraSession session) {
+      checkIsOnCameraThread();
+      Logging.d(TAG, "Create session done. Switch state: " + switchState);
+      uiThreadHandler.removeCallbacks(openCameraTimeoutRunnable);
+      synchronized (stateLock) {
+        capturerObserver.onCapturerStarted(true /* success */);
+        sessionOpening = false;
+        currentSession = session;
+        cameraStatistics = new CameraStatistics(surfaceHelper, eventsHandler);
+        firstFrameObserved = false;
+        stateLock.notifyAll();
 
-            if (switchState == SwitchState.IN_PROGRESS) {
-              switchState = SwitchState.IDLE;
-              if (switchEventsHandler != null) {
-                switchEventsHandler.onCameraSwitchDone(cameraEnumerator.isFrontFacing(cameraName));
-                switchEventsHandler = null;
-              }
-            } else if (switchState == SwitchState.PENDING) {
-              String selectedCameraName = pendingCameraName;
-              pendingCameraName = null;
-              switchState = SwitchState.IDLE;
-              switchCameraInternal(switchEventsHandler, selectedCameraName);
-            }
+        if (switchState == SwitchState.IN_PROGRESS) {
+          switchState = SwitchState.IDLE;
+          if (switchEventsHandler != null) {
+            switchEventsHandler.onCameraSwitchDone(cameraEnumerator.isFrontFacing(cameraName));
+            switchEventsHandler = null;
           }
+        } else if (switchState == SwitchState.PENDING) {
+          String selectedCameraName = pendingCameraName;
+          pendingCameraName = null;
+          switchState = SwitchState.IDLE;
+          switchCameraInternal(switchEventsHandler, selectedCameraName);
         }
+      }
+    }
 
-        @Override
-        public void onFailure(CameraSession.FailureType failureType, String error) {
-          checkIsOnCameraThread();
-          uiThreadHandler.removeCallbacks(openCameraTimeoutRunnable);
-          synchronized (stateLock) {
-            capturerObserver.onCapturerStarted(false /* success */);
-            openAttemptsRemaining--;
+    @Override
+    public void onFailure(CameraSession.FailureType failureType, String error) {
+      checkIsOnCameraThread();
+      uiThreadHandler.removeCallbacks(openCameraTimeoutRunnable);
+      synchronized (stateLock) {
+        capturerObserver.onCapturerStarted(false /* success */);
+        openAttemptsRemaining--;
 
-            if (openAttemptsRemaining <= 0) {
-              Logging.w(TAG, "Opening camera failed, passing: " + error);
-              sessionOpening = false;
-              stateLock.notifyAll();
+        if (openAttemptsRemaining <= 0) {
+          Logging.w(TAG, "Opening camera failed, passing: " + error);
+          sessionOpening = false;
+          stateLock.notifyAll();
 
-              if (switchState != SwitchState.IDLE) {
-                if (switchEventsHandler != null) {
-                  switchEventsHandler.onCameraSwitchError(error);
-                  switchEventsHandler = null;
-                }
-                switchState = SwitchState.IDLE;
-              }
-
-              if (failureType == CameraSession.FailureType.DISCONNECTED) {
-                eventsHandler.onCameraDisconnected();
-              } else {
-                eventsHandler.onCameraError(error);
-              }
-            } else {
-              Logging.w(TAG, "Opening camera failed, retry: " + error);
-              createSessionInternal(OPEN_CAMERA_DELAY_MS);
+          if (switchState != SwitchState.IDLE) {
+            if (switchEventsHandler != null) {
+              switchEventsHandler.onCameraSwitchError(error);
+              switchEventsHandler = null;
             }
+            switchState = SwitchState.IDLE;
           }
+
+          if (failureType == CameraSession.FailureType.DISCONNECTED) {
+            eventsHandler.onCameraDisconnected();
+          } else {
+            eventsHandler.onCameraError(error);
+          }
+        } else {
+          Logging.w(TAG, "Opening camera failed, retry: " + error);
+          createSessionInternal(OPEN_CAMERA_DELAY_MS);
         }
-      };
+      }
+    }
+  };
 
   @Nullable
   private final CameraSession.Events cameraSessionEventsHandler = new CameraSession.Events() {
@@ -185,7 +184,8 @@ abstract class CameraCapturer implements CameraVideoCapturer {
 
   private final Object stateLock = new Object();
   private boolean sessionOpening; /* guarded by stateLock */
-  @Nullable private CameraSession currentSession; /* guarded by stateLock */
+  @Nullable
+  private CameraSession currentSession; /* guarded by stateLock */
   private String cameraName; /* guarded by stateLock */
   private String pendingCameraName; /* guarded by stateLock */
   private int width; /* guarded by stateLock */
@@ -193,9 +193,11 @@ abstract class CameraCapturer implements CameraVideoCapturer {
   private int framerate; /* guarded by stateLock */
   private int openAttemptsRemaining; /* guarded by stateLock */
   private SwitchState switchState = SwitchState.IDLE; /* guarded by stateLock */
-  @Nullable private CameraSwitchHandler switchEventsHandler; /* guarded by stateLock */
+  @Nullable
+  private CameraSwitchHandler switchEventsHandler; /* guarded by stateLock */
   // Valid from onDone call until stopCapture, otherwise null.
-  @Nullable private CameraStatistics cameraStatistics; /* guarded by stateLock */
+  @Nullable
+  private CameraStatistics cameraStatistics; /* guarded by stateLock */
   private boolean firstFrameObserved; /* guarded by stateLock */
 
   public CameraCapturer(String cameraName, @Nullable CameraEventsHandler eventsHandler,
@@ -203,17 +205,28 @@ abstract class CameraCapturer implements CameraVideoCapturer {
     if (eventsHandler == null) {
       eventsHandler = new CameraEventsHandler() {
         @Override
-        public void onCameraError(String errorDescription) {}
+        public void onCameraError(String errorDescription) {
+        }
+
         @Override
-        public void onCameraDisconnected() {}
+        public void onCameraDisconnected() {
+        }
+
         @Override
-        public void onCameraFreezed(String errorDescription) {}
+        public void onCameraFreezed(String errorDescription) {
+        }
+
         @Override
-        public void onCameraOpening(String cameraName) {}
+        public void onCameraOpening(String cameraName) {
+        }
+
         @Override
-        public void onFirstFrameAvailable() {}
+        public void onFirstFrameAvailable() {
+        }
+
         @Override
-        public void onCameraClosed() {}
+        public void onCameraClosed() {
+        }
       };
     }
 
@@ -361,6 +374,20 @@ abstract class CameraCapturer implements CameraVideoCapturer {
   @Override
   public boolean isScreencast() {
     return false;
+  }
+
+  public void setZoom(final float ratio) {
+    Logging.d(TAG, "setZoom: " + ratio);
+    cameraThreadHandler.post(new Runnable() {
+      @Override
+      public void run() {
+        synchronized (stateLock) {
+          if (currentSession != null) {
+            currentSession.setZoom(ratio);
+          }
+        }
+      }
+    });
   }
 
   public void printStackTrace() {
