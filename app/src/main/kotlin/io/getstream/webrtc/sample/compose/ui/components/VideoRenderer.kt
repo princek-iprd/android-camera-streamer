@@ -75,7 +75,12 @@ private fun cleanTrack(
   view: VideoTextureViewRenderer?,
   trackState: MutableState<VideoTrack?>,
 ) {
-  view?.let { trackState.value?.removeSink(it) }
+  try {
+    view?.let { trackState.value?.removeSink(it) }
+  } catch (e: IllegalStateException) {
+    // The track was already disposed by the SessionManager.
+    e.printStackTrace()
+  }
   trackState.value = null
 }
 
@@ -91,5 +96,11 @@ private fun setupVideo(
   cleanTrack(renderer, trackState)
 
   trackState.value = track
-  track.addSink(renderer)
+  try {
+    track.addSink(renderer)
+  } catch (e: IllegalStateException) {
+    // The track was already disposed by the SessionManager.
+    // Catching this prevents the app from crashing.
+    e.printStackTrace()
+  }
 }

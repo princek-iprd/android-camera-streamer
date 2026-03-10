@@ -69,12 +69,12 @@ class WebRtcSessionManagerImpl(
 
   private val sessionManagerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-  // used to send local video track to the fragment
-  private val _localVideoSinkFlow = MutableSharedFlow<VideoTrack>()
+  // used to send local video track to the fragment - Replay = 1 ensures Compose gets the latest track
+  private val _localVideoSinkFlow = MutableSharedFlow<VideoTrack>(replay = 1)
   override val localVideoSinkFlow: SharedFlow<VideoTrack> = _localVideoSinkFlow
 
-  // used to send remote video track to the sender
-  private val _remoteVideoSinkFlow = MutableSharedFlow<VideoTrack>()
+  // used to send remote video track to the sender - Replay = 1 ensures Compose gets the latest track
+  private val _remoteVideoSinkFlow = MutableSharedFlow<VideoTrack>(replay = 1)
   override val remoteVideoSinkFlow: SharedFlow<VideoTrack> = _remoteVideoSinkFlow
 
   private val publisher = MediaMTXPublisher()
@@ -209,16 +209,25 @@ class WebRtcSessionManagerImpl(
   }
 
   override fun disconnect() {
-    // dispose audio & video tracks.
-    remoteVideoSinkFlow.replayCache.forEach { videoTrack ->
-      videoTrack.dispose()
+    // 1. Capture currently active tracks from cache
+    val cachedRemoteTracks = remoteVideoSinkFlow.replayCache.toList()
+    val cachedLocalTracks = localVideoSinkFlow.replayCache.toList()
+
+    // 2. Clear flows so Compose UI drops the tracks immediately
+    _remoteVideoSinkFlow.resetReplayCache()
+    _localVideoSinkFlow.resetReplayCache()
+
+    // 3. Safely dispose cached tracks
+    cachedRemoteTracks.forEach { videoTrack ->
+      try { videoTrack.dispose() } catch (e: Exception) { e.printStackTrace() }
     }
-    localVideoSinkFlow.replayCache.forEach { videoTrack ->
-      videoTrack.dispose()
+    cachedLocalTracks.forEach { videoTrack ->
+      try { videoTrack.dispose() } catch (e: Exception) { e.printStackTrace() }
     }
 
-    _localAudioTrack?.dispose()
-    _localVideoTrack?.dispose()
+    // 4. Safely dispose backing properties
+    try { _localAudioTrack?.dispose() } catch (e: Exception) { e.printStackTrace() }
+    try { _localVideoTrack?.dispose() } catch (e: Exception) { e.printStackTrace() }
     _localAudioTrack = null
     _localVideoTrack = null
 
@@ -226,21 +235,21 @@ class WebRtcSessionManagerImpl(
     _audioHandler?.stop()
     _audioHandler = null
 
-    _videoCapturer?.stopCapture()
-    _videoCapturer?.dispose()
+    try { _videoCapturer?.stopCapture() } catch (e: Exception) { e.printStackTrace() }
+    try { _videoCapturer?.dispose() } catch (e: Exception) { e.printStackTrace() }
     _videoCapturer = null
 
-    _videoSource?.dispose()
+    try { _videoSource?.dispose() } catch (e: Exception) { e.printStackTrace() }
     _videoSource = null
 
-    _audioSource?.dispose()
+    try { _audioSource?.dispose() } catch (e: Exception) { e.printStackTrace() }
     _audioSource = null
 
-    surfaceTextureHelper?.dispose()
+    try { surfaceTextureHelper?.dispose() } catch (e: Exception) { e.printStackTrace() }
     surfaceTextureHelper = null
 
-    _peerConnection?.connection?.close()
-    _peerConnection?.connection?.dispose()
+    try { _peerConnection?.connection?.close() } catch (e: Exception) { e.printStackTrace() }
+    try { _peerConnection?.connection?.dispose() } catch (e: Exception) { e.printStackTrace() }
     _peerConnection = null
 
     offer = null
