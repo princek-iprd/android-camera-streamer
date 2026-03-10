@@ -18,6 +18,8 @@ class CameraViewModel(
   private val webSocketManager = WebSocketManager()
   val uiState: StateFlow<CameraUiState> = _uiState
   private var targetIp: String = "10.102.10.112"
+  private val _zoomLevel = MutableStateFlow(2.0f)
+  val zoomLevel: StateFlow<Float> = _zoomLevel
 
   fun connectCamera(ip: String) {
     targetIp = ip
@@ -100,10 +102,9 @@ class CameraViewModel(
     }
   }
 
-  fun setZoom(level: Float) {
-    _uiState.update {
-      it.copy(zoomLevel = level)
-    }
+  fun setZoom(ratio: Float) {
+    _zoomLevel.value = ratio
+    sessionManager.setZoom(ratio)
   }
 
   override fun onCleared() {

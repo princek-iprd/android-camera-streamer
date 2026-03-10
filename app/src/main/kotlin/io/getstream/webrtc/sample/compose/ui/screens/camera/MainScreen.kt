@@ -26,6 +26,9 @@ fun MainScreen(
 
   val state by cameraViewModel.uiState.collectAsState()
 
+  // Track continuous zoom state from the ViewModel
+  val currentZoom by cameraViewModel.zoomLevel.collectAsState()
+
   Scaffold(
     modifier = Modifier.systemBarsPadding(),
     topBar = {
@@ -131,7 +134,7 @@ fun MainScreen(
       }
 
       /**
-       * Camera Preview + Zoom
+       * Camera Preview + Zoom Controls
        */
       if (state.isConnected && state.showPreview) {
         Card(
@@ -148,23 +151,43 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // --- NEW SLIDER UI ---
         Card(
           modifier = Modifier.fillMaxWidth(),
           elevation = 2.dp,
           shape = RoundedCornerShape(12.dp)
         ) {
-          Column(modifier = Modifier.padding(16.dp)) {
+          Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
             Text(
-              text = "Zoom Controls",
+              text = "Zoom Level: ${String.format("%.1f", currentZoom)}x",
               fontWeight = FontWeight.SemiBold,
               fontSize = 14.sp
             )
+
             Spacer(Modifier.height(8.dp))
-            ZoomControls(
-              onZoomSelected = { zoom ->
-                cameraViewModel.setZoom(zoom)
-              }
+
+            Slider(
+              value = currentZoom,
+              onValueChange = { newZoom ->
+                cameraViewModel.setZoom(newZoom)
+              },
+              valueRange = 1f..3f, // Min 1x, Max 3x
+              colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+              )
             )
+
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("1x", fontSize = 12.sp, color = Color.Gray)
+              Text("3x", fontSize = 12.sp, color = Color.Gray)
+            }
           }
         }
       }

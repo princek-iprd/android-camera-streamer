@@ -17,9 +17,11 @@
 package io.getstream.webrtc.sample.compose.webrtc.sessions
 
 import android.content.Context
+import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CaptureRequest
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
@@ -204,6 +206,15 @@ class WebRtcSessionManagerImpl(
     (videoCapturer as? Camera2Capturer)?.switchCamera(null)
   }
 
+  override fun setZoom(ratio: Float) {
+    try {
+      (videoCapturer as? org.webrtc.CameraCapturer)?.setZoom(ratio)
+    } catch (e: Exception) {
+      logger.e { "Failed to apply zoom natively: ${e.message}" }
+      e.printStackTrace()
+    }
+  }
+
   override fun enableMicrophone(enabled: Boolean) {
     audioManager?.isMicrophoneMute = !enabled
   }
@@ -274,17 +285,11 @@ class WebRtcSessionManagerImpl(
   }
 
   private suspend fun sendOffer(ip: String) {
-
     val offer = peerConnection.createOffer().getOrThrow()
-
     peerConnection.setLocalDescription(offer)
-
     publisher.publishOffer(ip, offer) { answer ->
-
       sessionManagerScope.launch {
-
         peerConnection.setRemoteDescription(answer)
-
       }
     }
   }
