@@ -6,7 +6,9 @@ import org.json.JSONObject
 
 class WebSocketManager {
 
-  private val client = OkHttpClient()
+  private val client = OkHttpClient.Builder()
+    .pingInterval(10, java.util.concurrent.TimeUnit.SECONDS)
+    .build()
 
   private var webSocket: WebSocket? = null
 
