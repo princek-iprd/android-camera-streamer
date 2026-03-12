@@ -38,4 +38,6 @@ interface WebRtcSessionManager {
   fun enableMicrophone(enabled: Boolean)
 
   fun disconnect()
+
+  fun setZoom(ratio: Float)
 }

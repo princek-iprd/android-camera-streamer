@@ -36,7 +36,9 @@ import okhttp3.WebSocketListener
 class SignalingClient {
   private val logger by taggedLogger("Call:SignalingClient")
   private var signalingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-  private val client = OkHttpClient()
+  private val client = OkHttpClient.Builder()
+    .pingInterval(10, java.util.concurrent.TimeUnit.SECONDS)
+    .build()
   private var ws: WebSocket? = null
 
   fun connect(ip: String) {

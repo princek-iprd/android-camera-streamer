@@ -16,28 +16,39 @@ import android.view.WindowManager;
 import android.view.Surface;
 
 interface CameraSession {
-  enum FailureType { ERROR, DISCONNECTED }
+  enum FailureType {
+    ERROR, DISCONNECTED
+  }
 
   // Callbacks are fired on the camera thread.
   interface CreateSessionCallback {
     void onDone(CameraSession session);
+
     void onFailure(FailureType failureType, String error);
   }
 
   // Events are fired on the camera thread.
   interface Events {
     void onCameraOpening();
+
     void onCameraError(CameraSession session, String error);
+
     void onCameraDisconnected(CameraSession session);
+
     void onCameraClosed(CameraSession session);
+
     void onFrameCaptured(CameraSession session, VideoFrame frame);
   }
 
   /**
-   * Stops the capture. Waits until no more calls to capture observer will be made.
+   * Stops the capture. Waits until no more calls to capture observer will be
+   * made.
    * If waitCameraStop is true, also waits for the camera to stop.
    */
   void stop();
+
+  default void setZoom(float ratio) {
+  }
 
   static int getDeviceOrientation(Context context) {
     final WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
@@ -57,7 +68,8 @@ interface CameraSession {
   static VideoFrame.TextureBuffer createTextureBufferWithModifiedTransformMatrix(
       TextureBufferImpl buffer, boolean mirror, int rotation) {
     final Matrix transformMatrix = new Matrix();
-    // Perform mirror and rotation around (0.5, 0.5) since that is the center of the texture.
+    // Perform mirror and rotation around (0.5, 0.5) since that is the center of the
+    // texture.
     transformMatrix.preTranslate(/* dx= */ 0.5f, /* dy= */ 0.5f);
     if (mirror) {
       transformMatrix.preScale(/* sx= */ -1f, /* sy= */ 1f);
@@ -65,7 +77,8 @@ interface CameraSession {
     transformMatrix.preRotate(rotation);
     transformMatrix.preTranslate(/* dx= */ -0.5f, /* dy= */ -0.5f);
 
-    // The width and height are not affected by rotation since Camera2Session has set them to the
+    // The width and height are not affected by rotation since Camera2Session has
+    // set them to the
     // value they should be after undoing the rotation.
     return buffer.applyTransformMatrix(transformMatrix, buffer.getWidth(), buffer.getHeight());
   }

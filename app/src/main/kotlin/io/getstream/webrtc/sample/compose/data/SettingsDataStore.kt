@@ -18,18 +18,18 @@ class SettingsDataStore(private val context: Context) {
 
   val savedIpsFlow: Flow<List<String>> = context.dataStore.data
     .map { preferences ->
-      val ipsString = preferences[SAVED_IPS_KEY] ?: "10.102.10.112" // default IP
+      val ipsString = preferences[SAVED_IPS_KEY] ?: ""
       ipsString.split(",").filter { it.isNotBlank() }
     }
 
   val selectedIpFlow: Flow<String> = context.dataStore.data
     .map { preferences ->
-      preferences[SELECTED_IP_KEY] ?: "10.102.10.112" // default IP
+      preferences[SELECTED_IP_KEY] ?: ""
     }
 
   suspend fun saveIp(ip: String) {
     context.dataStore.edit { preferences ->
-      val currentIpsString = preferences[SAVED_IPS_KEY] ?: "10.102.10.112"
+      val currentIpsString = preferences[SAVED_IPS_KEY] ?: ""
       val currentIps = currentIpsString.split(",").filter { it.isNotBlank() }.toMutableSet()
       currentIps.add(ip)
       preferences[SAVED_IPS_KEY] = currentIps.joinToString(",")
@@ -44,18 +44,15 @@ class SettingsDataStore(private val context: Context) {
 
   suspend fun removeIp(ipToRemove: String) {
     context.dataStore.edit { preferences ->
-      // 1. Get current IPs and split them into a MutableSet
-      val currentIpsString = preferences[SAVED_IPS_KEY] ?: "10.102.10.112"
+      val currentIpsString = preferences[SAVED_IPS_KEY] ?: ""
       val currentIps = currentIpsString.split(",").filter { it.isNotBlank() }.toMutableSet()
 
-      // 2. Remove the target IP and save back as comma-separated string
       if (currentIps.contains(ipToRemove)) {
         currentIps.remove(ipToRemove)
         preferences[SAVED_IPS_KEY] = currentIps.joinToString(",")
       }
 
-      // 3. If the user deleted the currently selected IP, default to the first available one
-      val currentSelectedIp = preferences[SELECTED_IP_KEY] ?: "10.102.10.112"
+      val currentSelectedIp = preferences[SELECTED_IP_KEY] ?: ""
       if (currentSelectedIp == ipToRemove) {
         preferences[SELECTED_IP_KEY] = currentIps.firstOrNull() ?: ""
       }

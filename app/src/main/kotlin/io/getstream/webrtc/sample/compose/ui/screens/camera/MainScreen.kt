@@ -1,5 +1,6 @@
 package io.getstream.webrtc.sample.compose.ui.screens.camera
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +27,15 @@ fun MainScreen(
 ) {
 
   val state by cameraViewModel.uiState.collectAsState()
+  val currentZoom by cameraViewModel.zoomLevel.collectAsState()
+  val context = LocalContext.current
+
+  // Collect toast events from the ViewModel
+  LaunchedEffect(Unit) {
+    cameraViewModel.toastMessageFlow.collect { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+  }
 
   Scaffold(
     modifier = Modifier.systemBarsPadding(),
@@ -33,7 +44,11 @@ fun MainScreen(
         title = {
           Column {
             Text("Stream WebRTC", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(selectedIp, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+            Text(
+              text = if (selectedIp.isBlank()) "No server configured" else selectedIp,
+              fontSize = 12.sp,
+              color = if (selectedIp.isBlank()) Color.Yellow.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.7f)
+            )
           }
         },
         actions = {
@@ -76,7 +91,18 @@ fun MainScreen(
            */
           if (!state.isConnected) {
             Button(
-              onClick = { cameraViewModel.connectCamera(selectedIp) },
+              onClick = {
+                if (selectedIp.isBlank()) {
+                  Toast.makeText(
+                    context,
+                    "No server IP configured — go to Settings to add one",
+                    Toast.LENGTH_LONG
+                  ).show()
+                  onNavigateToSettings()
+                } else {
+                  cameraViewModel.connectCamera(selectedIp)
+                }
+              },
               modifier = Modifier.fillMaxWidth().height(48.dp),
               shape = RoundedCornerShape(8.dp)
             ) {
@@ -131,7 +157,7 @@ fun MainScreen(
       }
 
       /**
-       * Camera Preview + Zoom
+       * Camera Preview + Zoom Controls
        */
       if (state.isConnected && state.showPreview) {
         Card(
@@ -153,18 +179,37 @@ fun MainScreen(
           elevation = 2.dp,
           shape = RoundedCornerShape(12.dp)
         ) {
-          Column(modifier = Modifier.padding(16.dp)) {
+          Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
             Text(
-              text = "Zoom Controls",
+              text = "Zoom Level: ${String.format("%.1f", currentZoom)}x",
               fontWeight = FontWeight.SemiBold,
               fontSize = 14.sp
             )
+
             Spacer(Modifier.height(8.dp))
-            ZoomControls(
-              onZoomSelected = { zoom ->
-                cameraViewModel.setZoom(zoom)
-              }
+
+            Slider(
+              value = currentZoom,
+              onValueChange = { newZoom ->
+                cameraViewModel.setZoom(newZoom)
+              },
+              valueRange = 1f..3f,
+              colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+              )
             )
+
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("1x", fontSize = 12.sp, color = Color.Gray)
+              Text("3x", fontSize = 12.sp, color = Color.Gray)
+            }
           }
         }
       }
