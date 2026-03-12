@@ -1,6 +1,7 @@
 package io.getstream.webrtc.sample.compose.ui.screens.camera
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -13,10 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.getstream.webrtc.sample.compose.R
 import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel
 
 @Composable
@@ -43,7 +47,7 @@ fun MainScreen(
       TopAppBar(
         title = {
           Column {
-            Text("Stream WebRTC", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("Impact Health Android Camera", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(
               text = if (selectedIp.isBlank()) "No server configured" else selectedIp,
               fontSize = 12.sp,
@@ -136,10 +140,44 @@ fun MainScreen(
 
       Spacer(modifier = Modifier.height(24.dp))
 
+      // Logos — shown only before streaming starts
+      if (!state.showPreview) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .padding(horizontal = 16.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Image(
+            painter = painterResource(id = R.drawable.impact_health_new),
+            contentDescription = "Impact Health Logo",
+            modifier = Modifier
+              .weight(1f)
+              .fillMaxHeight()
+              .padding(end = 12.dp),
+            contentScale = ContentScale.Fit
+          )
+          Image(
+            painter = painterResource(id = R.drawable.iprd),
+            contentDescription = "IPRD Logo",
+            modifier = Modifier
+              .weight(1f)
+              .fillMaxHeight()
+              .padding(start = 12.dp),
+            contentScale = ContentScale.Fit
+          )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+      }
+
       /**
-       * Show Preview Button
+       * Start Streaming Button
        */
       if (state.isConnected) {
+
         if (!state.showPreview) {
           Button(
             onClick = { cameraViewModel.showPreview() },
@@ -149,7 +187,7 @@ fun MainScreen(
           ) {
             Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colors.onSecondary)
             Spacer(Modifier.width(8.dp))
-            Text("Show Preview", color = MaterialTheme.colors.onSecondary)
+            Text("Start Streaming", color = MaterialTheme.colors.onSecondary)
           }
         }
 
