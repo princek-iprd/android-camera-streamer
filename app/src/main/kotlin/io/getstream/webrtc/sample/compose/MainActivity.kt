@@ -3,14 +3,8 @@ package io.getstream.webrtc.sample.compose
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import io.getstream.webrtc.sample.compose.ui.screens.camera.MainScreen
-import io.getstream.webrtc.sample.compose.ui.theme.WebrtcSampleComposeTheme
-import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel
-import io.getstream.webrtc.sample.compose.webrtc.SignalingClient
-import io.getstream.webrtc.sample.compose.webrtc.peer.StreamPeerConnectionFactory
-import io.getstream.webrtc.sample.compose.webrtc.sessions.LocalWebRtcSessionManager
-import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManagerImpl
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -18,8 +12,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.getstream.webrtc.sample.compose.data.SettingsDataStore
+import io.getstream.webrtc.sample.compose.ui.screens.camera.MainScreen
 import io.getstream.webrtc.sample.compose.ui.screens.settings.SettingsScreen
 import io.getstream.webrtc.sample.compose.ui.screens.settings.SettingsViewModel
+import io.getstream.webrtc.sample.compose.ui.theme.WebrtcSampleComposeTheme
+import io.getstream.webrtc.sample.compose.viewmodel.CameraViewModelFactory
+import io.getstream.webrtc.sample.compose.webrtc.SignalingClient
+import io.getstream.webrtc.sample.compose.webrtc.peer.StreamPeerConnectionFactory
+import io.getstream.webrtc.sample.compose.webrtc.sessions.LocalWebRtcSessionManager
+import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManagerImpl
 
 class MainActivity : ComponentActivity() {
 
@@ -39,11 +40,15 @@ class MainActivity : ComponentActivity() {
     )
   }
 
+  // viewModels() stores the ViewModel in the Activity's ViewModelStore —
+  // it survives background/foreground transitions and config changes.
+  private val cameraViewModel by viewModels<io.getstream.webrtc.sample.compose.viewmodel.CameraViewModel> {
+    CameraViewModelFactory(applicationContext, sessionManager)
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-    val cameraViewModel = CameraViewModel(sessionManager)
 
     setContent {
 
@@ -55,7 +60,6 @@ class MainActivity : ComponentActivity() {
           val navController = rememberNavController()
           val settingsDataStore = remember { SettingsDataStore(this@MainActivity) }
 
-          // Pass the Context (this@MainActivity) as the first parameter to SettingsViewModel
           val settingsViewModel = remember { SettingsViewModel(this@MainActivity, settingsDataStore) }
 
           val selectedIp by settingsViewModel.selectedIp.collectAsState()

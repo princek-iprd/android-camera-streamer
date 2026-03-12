@@ -1,16 +1,20 @@
 package io.getstream.webrtc.sample.compose.viewmodel
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.getstream.webrtc.sample.compose.CameraForegroundService
 import io.getstream.webrtc.sample.compose.network.WebSocketManager
 import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.webrtc.VideoTrack
 
 class CameraViewModel(
+  private val appContext: Context,
   private val sessionManager: WebRtcSessionManager
 ) : ViewModel() {
 
@@ -32,7 +36,6 @@ class CameraViewModel(
       url = "ws://$ip/android-camera-service/ws_android",
 
       onConnected = {
-
         _uiState.update {
           it.copy(
             isConnected = true,
@@ -42,7 +45,6 @@ class CameraViewModel(
       },
 
       onDisconnected = {
-
         _uiState.update {
           it.copy(
             isConnected = false,
@@ -50,6 +52,7 @@ class CameraViewModel(
             status = "Disconnected"
           )
         }
+        stopForegroundService()
       },
 
       onMessage = { message ->
@@ -59,7 +62,7 @@ class CameraViewModel(
   }
 
   fun disconnectCamera() {
-
+    stopForegroundService()
     webSocketManager.disconnect()
     sessionManager.disconnect()
 
@@ -73,7 +76,6 @@ class CameraViewModel(
   }
 
   fun showPreview() {
-
     _uiState.update {
       it.copy(
         showPreview = true,
@@ -81,17 +83,14 @@ class CameraViewModel(
       )
     }
 
+    startForegroundService()
     observeLocalVideoTrack()
-
     sessionManager.onSessionScreenReady(targetIp)
   }
 
   private fun observeLocalVideoTrack() {
-
     viewModelScope.launch {
-
       sessionManager.localVideoSinkFlow.collect { track ->
-
         _uiState.update {
           it.copy(
             localVideoTrack = track,
@@ -105,6 +104,19 @@ class CameraViewModel(
   fun setZoom(ratio: Float) {
     _zoomLevel.value = ratio
     sessionManager.setZoom(ratio)
+  }
+
+  private fun startForegroundService() {
+    val intent = Intent(appContext, CameraForegroundService::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      appContext.startForegroundService(intent)
+    } else {
+      appContext.startService(intent)
+    }
+  }
+
+  private fun stopForegroundService() {
+    appContext.stopService(Intent(appContext, CameraForegroundService::class.java))
   }
 
   override fun onCleared() {
