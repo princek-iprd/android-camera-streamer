@@ -1,5 +1,6 @@
 package io.getstream.webrtc.sample.compose.ui.screens.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +32,7 @@ fun SettingsScreen(
 ) {
   val savedIps by viewModel.savedIps.collectAsState()
   val selectedIp by viewModel.selectedIp.collectAsState()
+  val context = LocalContext.current
 
   // Scanner States
   val isScanning by viewModel.isScanning.collectAsState()
@@ -38,8 +41,14 @@ fun SettingsScreen(
 
   var newIpText by remember { mutableStateOf("") }
 
-  // Check if current text is a valid IP address
   val isIpValid = newIpText.matches(IP_REGEX)
+
+  // Collect toast events from ViewModel
+  LaunchedEffect(Unit) {
+    viewModel.toastMessageFlow.collect { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+  }
 
   Scaffold(
     modifier = Modifier.systemBarsPadding(),
@@ -82,7 +91,6 @@ fun SettingsScreen(
             OutlinedTextField(
               value = newIpText,
               onValueChange = { input ->
-                // Optional: Filter out any characters that aren't numbers or dots immediately
                 newIpText = input.filter { it.isDigit() || it == '.' }
               },
               label = { Text("IP Address (e.g., 192.168.1.5)") },
@@ -97,7 +105,7 @@ fun SettingsScreen(
                 viewModel.addAndSelectIp(newIpText)
                 newIpText = ""
               },
-              enabled = isIpValid, // Only enable if it's a valid IP
+              enabled = isIpValid,
               modifier = Modifier
                 .height(56.dp)
                 .padding(top = 8.dp),
@@ -240,7 +248,6 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(8.dp))
               }
 
-              // --- NEW: Remove / Delete IP Button ---
               IconButton(
                 onClick = { viewModel.removeIp(ip) },
                 modifier = Modifier.size(32.dp)

@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.getstream.webrtc.sample.compose.data.SettingsDataStore
 import io.getstream.webrtc.sample.compose.network.OrinServerScanner
-// import io.getstream.webrtc.sample.compose.utils.OrinServerScanner
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,8 +36,12 @@ class SettingsViewModel(
     .stateIn(
       scope = viewModelScope,
       started = SharingStarted.WhileSubscribed(5000),
-      initialValue = "10.102.10.112"
+      initialValue = ""
     )
+
+  // Toast events for the UI to consume
+  private val _toastMessageFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+  val toastMessageFlow: SharedFlow<String> = _toastMessageFlow.asSharedFlow()
 
   // Scanning States
   private val _isScanning = MutableStateFlow(false)
@@ -52,6 +58,7 @@ class SettingsViewModel(
       viewModelScope.launch {
         dataStore.saveIp(ip)
         dataStore.selectIp(ip)
+        _toastMessageFlow.emit("Server IP saved: $ip")
       }
     }
   }
@@ -62,14 +69,12 @@ class SettingsViewModel(
     }
   }
 
-  // --- NEW: Remove IP Logic ---
   fun removeIp(ip: String) {
     viewModelScope.launch {
-      dataStore.removeIp(ip) // Ensure SettingsDataStore has this method implemented
+      dataStore.removeIp(ip)
     }
   }
 
-  // --- Scanner Logic ---
   fun startScan() {
     if (_isScanning.value) return
 

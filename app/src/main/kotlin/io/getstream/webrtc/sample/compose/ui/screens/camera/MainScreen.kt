@@ -1,5 +1,6 @@
 package io.getstream.webrtc.sample.compose.ui.screens.camera
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,9 +27,15 @@ fun MainScreen(
 ) {
 
   val state by cameraViewModel.uiState.collectAsState()
-
-  // Track continuous zoom state from the ViewModel
   val currentZoom by cameraViewModel.zoomLevel.collectAsState()
+  val context = LocalContext.current
+
+  // Collect toast events from the ViewModel
+  LaunchedEffect(Unit) {
+    cameraViewModel.toastMessageFlow.collect { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+  }
 
   Scaffold(
     modifier = Modifier.systemBarsPadding(),
@@ -36,7 +44,11 @@ fun MainScreen(
         title = {
           Column {
             Text("Stream WebRTC", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(selectedIp, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+            Text(
+              text = if (selectedIp.isBlank()) "No server configured" else selectedIp,
+              fontSize = 12.sp,
+              color = if (selectedIp.isBlank()) Color.Yellow.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.7f)
+            )
           }
         },
         actions = {
@@ -79,7 +91,18 @@ fun MainScreen(
            */
           if (!state.isConnected) {
             Button(
-              onClick = { cameraViewModel.connectCamera(selectedIp) },
+              onClick = {
+                if (selectedIp.isBlank()) {
+                  Toast.makeText(
+                    context,
+                    "No server IP configured — go to Settings to add one",
+                    Toast.LENGTH_LONG
+                  ).show()
+                  onNavigateToSettings()
+                } else {
+                  cameraViewModel.connectCamera(selectedIp)
+                }
+              },
               modifier = Modifier.fillMaxWidth().height(48.dp),
               shape = RoundedCornerShape(8.dp)
             ) {
@@ -151,7 +174,6 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- NEW SLIDER UI ---
         Card(
           modifier = Modifier.fillMaxWidth(),
           elevation = 2.dp,
@@ -174,7 +196,7 @@ fun MainScreen(
               onValueChange = { newZoom ->
                 cameraViewModel.setZoom(newZoom)
               },
-              valueRange = 1f..3f, // Min 1x, Max 3x
+              valueRange = 1f..3f,
               colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colors.primary,
                 activeTrackColor = MaterialTheme.colors.primary

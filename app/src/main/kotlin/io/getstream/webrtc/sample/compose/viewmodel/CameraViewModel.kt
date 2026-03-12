@@ -8,8 +8,11 @@ import androidx.lifecycle.viewModelScope
 import io.getstream.webrtc.sample.compose.CameraForegroundService
 import io.getstream.webrtc.sample.compose.network.WebSocketManager
 import io.getstream.webrtc.sample.compose.webrtc.sessions.WebRtcSessionManager
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -21,9 +24,13 @@ class CameraViewModel(
   private val _uiState = MutableStateFlow(CameraUiState())
   private val webSocketManager = WebSocketManager()
   val uiState: StateFlow<CameraUiState> = _uiState
-  private var targetIp: String = "10.102.10.112"
+  private var targetIp: String = ""
   private val _zoomLevel = MutableStateFlow(2.0f)
   val zoomLevel: StateFlow<Float> = _zoomLevel
+
+  // Toast events for the UI to consume
+  private val _toastMessageFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+  val toastMessageFlow: SharedFlow<String> = _toastMessageFlow.asSharedFlow()
 
   fun connectCamera(ip: String) {
     targetIp = ip
@@ -41,6 +48,9 @@ class CameraViewModel(
             isConnected = true,
             status = "Connected to server"
           )
+        }
+        viewModelScope.launch {
+          _toastMessageFlow.emit("Connected to server")
         }
       },
 
@@ -81,6 +91,10 @@ class CameraViewModel(
         showPreview = true,
         status = "Starting camera..."
       )
+    }
+
+    viewModelScope.launch {
+      _toastMessageFlow.emit("Streaming started")
     }
 
     startForegroundService()
