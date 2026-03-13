@@ -82,7 +82,10 @@ class WebRtcSessionManagerImpl(
 
   private val publisher = MediaMTXPublisher()
 
+  @Volatile
   private var isFrontCamera = false
+
+  @Volatile
   private var deviceOrientation = 0
 
   private val orientationEventListener by lazy {
@@ -325,6 +328,7 @@ class WebRtcSessionManagerImpl(
   }
 
   override fun onSessionScreenReady(ip: String) {
+    orientationEventListener.enable()
     peerConnection.connection.addTrack(localVideoTrack)
 //    peerConnection.connection.addTrack(localAudioTrack)
     sessionManagerScope.launch {
