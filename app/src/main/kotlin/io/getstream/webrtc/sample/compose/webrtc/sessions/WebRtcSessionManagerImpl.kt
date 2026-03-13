@@ -25,6 +25,7 @@ import android.hardware.camera2.CaptureRequest
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
+import android.view.OrientationEventListener
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.core.content.getSystemService
@@ -81,6 +82,23 @@ class WebRtcSessionManagerImpl(
 
   private val publisher = MediaMTXPublisher()
 
+  private var isFrontCamera = false
+  private var deviceOrientation = 0
+
+  private val orientationEventListener by lazy {
+    object : OrientationEventListener(context) {
+      override fun onOrientationChanged(orientation: Int) {
+        if (orientation == ORIENTATION_UNKNOWN) return
+        deviceOrientation = when (orientation) {
+          in 45..134 -> 90
+          in 135..224 -> 180
+          in 225..314 -> 270
+          else -> 0
+        }
+      }
+    }
+  }
+
   // declaring video constraints and setting OfferToReceiveVideo to true
   // this step is mandatory to create valid offer and answer
   private val mediaConstraints = MediaConstraints().apply {
@@ -133,7 +151,32 @@ class WebRtcSessionManagerImpl(
           peerConnectionFactory.eglBaseContext,
         )
       }
-      videoCapturer.initialize(surfaceTextureHelper, context, this.capturerObserver)
+      
+      val customObserver = object : org.webrtc.CapturerObserver {
+        override fun onCapturerStarted(success: Boolean) {
+          this@apply.capturerObserver.onCapturerStarted(success)
+        }
+
+        override fun onCapturerStopped() {
+          this@apply.capturerObserver.onCapturerStopped()
+        }
+
+        override fun onFrameCaptured(frame: org.webrtc.VideoFrame) {
+          val offset = if (isFrontCamera) {
+            (360 - deviceOrientation) % 360
+          } else {
+            deviceOrientation
+          }
+          val newRotation = (frame.rotation + offset) % 360
+
+          frame.buffer.retain()
+          val rotatedFrame = org.webrtc.VideoFrame(frame.buffer, newRotation, frame.timestampNs)
+          this@apply.capturerObserver.onFrameCaptured(rotatedFrame)
+          rotatedFrame.release()
+        }
+      }
+
+      videoCapturer.initialize(surfaceTextureHelper, context, customObserver)
       videoCapturer.startCapture(resolution.width, resolution.height, 30)
     }
 
@@ -189,6 +232,8 @@ class WebRtcSessionManagerImpl(
     ).also { _peerConnection = it }
 
   init {
+    orientationEventListener.enable()
+
     sessionManagerScope.launch {
       signalingClient.signalingCommandFlow
         .collect { commandToValue ->
@@ -203,7 +248,15 @@ class WebRtcSessionManagerImpl(
   }
 
   override fun flipCamera() {
-    (videoCapturer as? Camera2Capturer)?.switchCamera(null)
+    (videoCapturer as? org.webrtc.CameraVideoCapturer)?.switchCamera(object : org.webrtc.CameraVideoCapturer.CameraSwitchHandler {
+      override fun onCameraSwitchDone(isFront: Boolean) {
+        isFrontCamera = isFront
+      }
+
+      override fun onCameraSwitchError(errorDescription: String?) {
+        logger.e { "Camera switch error: $errorDescription" }
+      }
+    })
   }
 
   override fun setZoom(ratio: Float) {
@@ -220,6 +273,8 @@ class WebRtcSessionManagerImpl(
   }
 
   override fun disconnect() {
+    orientationEventListener.disable()
+
     // 1. Capture currently active tracks from cache
     val cachedRemoteTracks = remoteVideoSinkFlow.replayCache.toList()
     val cachedLocalTracks = localVideoSinkFlow.replayCache.toList()
@@ -344,6 +399,7 @@ class WebRtcSessionManagerImpl(
       if (cameraLensFacing == CameraMetadata.LENS_FACING_BACK) {
         foundCamera = true
         cameraId = id
+        isFrontCamera = false
         break
       }
     }
@@ -351,6 +407,8 @@ class WebRtcSessionManagerImpl(
     // fallback if rear camera not found
     if (!foundCamera && ids.isNotEmpty()) {
       cameraId = ids.first()
+      val characteristics = manager.getCameraCharacteristics(cameraId)
+      isFrontCamera = characteristics.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_FRONT
     }
 
     return Camera2Capturer(context, cameraId, null)
